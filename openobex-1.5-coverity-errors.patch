@@ -1,0 +1,1304 @@
+From 905a4031a282286b9f262f72233dccf5264d07e1 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Thu, 6 Dec 2012 15:26:00 +0100
+Subject: [PATCH 01/15] NEGATIVE_RETURNS (CWE-394)
+
+Coverity output:
+openobex-1.5.0-Source/ircp/ircp_client.c:281: cond_false: Condition
+"!(cli != NULL)", taking false branch
+openobex-1.5.0-Source/ircp/ircp_client.c:281: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_client.c:285: negative_return_fn:
+Function "open(localname, 0, 0)" returns a negative number.
+openobex-1.5.0-Source/ircp/ircp_client.c:285: var_assign: Assigning:
+signed variable "cli->fd" = "open(char const *, int, ...)".
+openobex-1.5.0-Source/ircp/ircp_client.c:286: cond_true: Condition
+"cli->fd < 0", taking true branch
+openobex-1.5.0-Source/ircp/ircp_client.c:287: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/ircp/ircp_client.c:289: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_client.c:291: negative_returns:
+"cli->fd" is passed to a parameter that cannot be negative.
+---
+ ircp/ircp_client.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/ircp/ircp_client.c b/ircp/ircp_client.c
+index 1211275..140a0a6 100644
+--- a/ircp/ircp_client.c
++++ b/ircp/ircp_client.c
+@@ -283,12 +283,13 @@ static int ircp_put_file(ircp_client_t *cli, char *localname, char *remotename)
+ 	object = build_object_from_file(cli->obexhandle, localname, remotename);
+ 	
+ 	cli->fd = open(localname, O_RDONLY, 0);
+-	if(cli->fd < 0)
++	if(cli->fd < 0) {
+ 		ret = -1;
+-	else
++	}
++	else {
+ 		ret = cli_sync_request(cli, object);
+-	
+-	close(cli->fd);
++		close(cli->fd);
++	}
+ 		
+ 	if(ret < 0)
+ 		cli->infocb(IRCP_EV_ERR, localname);
+-- 
+1.7.11.7
+
+
+From 6fe0d32d9730ff75c36c8cfc47b64b0c45b2d261 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Thu, 6 Dec 2012 15:42:00 +0100
+Subject: [PATCH 02/15] OVERRUN
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_test.c:118: cond_true: Condition
+"(inaddr = inet_addr(name)) != 4294967295UL /* (unsigned
+long)4294967295U */", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:119: overrun-buffer-arg:
+Overrunning struct type in_addr of 4 bytes by passing it to a function
+which accesses it at byte offset 7 using argument "8UL".
+---
+ apps/obex_test.c | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/apps/obex_test.c b/apps/obex_test.c
+index 82af2c4..c04aa5d 100644
+--- a/apps/obex_test.c
++++ b/apps/obex_test.c
+@@ -40,17 +40,15 @@
+ #include <arpa/inet.h>
+ #include <netdb.h>
+ #include <netinet/in.h>
+-#endif
++#else
++#define in_addr_t unsigned long
++#endif /* _WIN32 */
+ 
+ #include <stdio.h>
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
+-#ifndef in_addr_t
+-#define in_addr_t unsigned long
+-#endif
+-
+ #define TRUE  1
+ #define FALSE 0
+ 
+-- 
+1.7.11.7
+
+
+From bda5c4a1f05cb891a092a19d07e9ffeff4125296 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Thu, 6 Dec 2012 15:47:12 +0100
+Subject: [PATCH 03/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/lib/databuffer.c:108: cond_false: Condition "!p",
+taking false branch
+openobex-1.5.0-Source/lib/databuffer.c:109: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:111: cond_true: Condition
+"new_size < bSize", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:113: cond_true: Condition "itRem
+> p->data_avail", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:116: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/lib/databuffer.c:119: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:120: cond_true: Condition "itRem
+> p->tail_avail", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:123: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/lib/databuffer.c:126: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:130: cond_true: Condition "itRem
+> p->head_avail", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:134: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/lib/databuffer.c:138: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:139: cond_true: Condition "itRem
+> p->data_size", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:141: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/lib/databuffer.c:143: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:145: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/lib/databuffer.c:146: if_end: End of if statement
+openobex-1.5.0-Source/lib/databuffer.c:147: alloc_fn: Storage is
+returned from allocation function "realloc(void *, size_t)".
+openobex-1.5.0-Source/lib/databuffer.c:147: var_assign: Assigning: "tmp"
+= storage returned from "realloc(p->buffer, new_size)".
+openobex-1.5.0-Source/lib/databuffer.c:148: cond_true: Condition
+"!new_size", taking true branch
+openobex-1.5.0-Source/lib/databuffer.c:155: leaked_storage: Variable
+"tmp" going out of scope leaks the storage it points to.
+---
+ lib/databuffer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/databuffer.c b/lib/databuffer.c
+index 7b71fdf..e3934f4 100644
+--- a/lib/databuffer.c
++++ b/lib/databuffer.c
+@@ -144,7 +144,6 @@ void buf_resize(buf_t *p, size_t new_size)
+ 		bSize = 0;
+ 	} else
+ 		bSize = new_size - bSize;
+-	tmp = realloc(p->buffer, new_size);
+ 	if (!new_size) {
+ 		p->buffer = NULL;
+ 		p->data = NULL;
+@@ -154,6 +153,7 @@ void buf_resize(buf_t *p, size_t new_size)
+ 		p->data_size = 0;
+ 		return;
+ 	}
++	tmp = realloc(p->buffer, new_size);
+ 	if (!tmp)
+ 		return;
+ 	p->data_avail += bSize;
+-- 
+1.7.11.7
+
+
+From c6f7cf9d6bcf458d95d29101c4b5602bbef2e0cc Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Thu, 6 Dec 2012 16:00:43 +0100
+Subject: [PATCH 04/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/ircp/ircp_client.c:281: cond_false: Condition
+"!(cli != NULL)", taking false branch
+openobex-1.5.0-Source/ircp/ircp_client.c:281: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_client.c:283: alloc_fn: Storage is
+returned from allocation function "build_object_from_file(obex_t *, char
+const *, char const *)".
+openobex-1.5.0-Source/ircp/ircp_io.c:72:2: alloc_fn: Storage is returned
+from allocation function "OBEX_ObjectNew(obex_t *, uint8_t)".
+openobex-1.5.0-Source/lib/obex.c:626:2: cond_false: Condition "!(self !=
+NULL)", taking false branch
+openobex-1.5.0-Source/lib/obex.c:626:2: if_end: End of if statement
+openobex-1.5.0-Source/lib/obex.c:628:2: alloc_fn: Storage is returned
+from allocation function "obex_object_new(void)".
+openobex-1.5.0-Source/lib/obex_object.c:46:2: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/lib/obex_object.c:46:2: var_assign: Assigning:
+"object" = "malloc(120UL)".
+openobex-1.5.0-Source/lib/obex_object.c:47:2: cond_false: Condition
+"object == NULL", taking false branch
+openobex-1.5.0-Source/lib/obex_object.c:48:3: if_end: End of if
+statement
+openobex-1.5.0-Source/lib/obex_object.c:50:2: noescape: Resource
+"object" is not freed or pointed-to in function "memset(void *, int,
+size_t)".
+openobex-1.5.0-Source/lib/obex_object.c:52:2: noescape: Resource
+"object" is not freed or pointed-to in function
+"obex_object_setrsp(obex_object_t *, uint8_t, uint8_t)".
+openobex-1.5.0-Source/lib/obex_object.c:128:39: noescape:
+"obex_object_setrsp(obex_object_t *, uint8_t, uint8_t)" does not free or
+save its pointer parameter "object".
+openobex-1.5.0-Source/lib/obex_object.c:54:2: return_alloc: Returning
+allocated memory "object".
+openobex-1.5.0-Source/lib/obex.c:628:2: var_assign: Assigning: "object"
+= "obex_object_new()".
+openobex-1.5.0-Source/lib/obex.c:629:2: cond_false: Condition "object ==
+NULL", taking false branch
+openobex-1.5.0-Source/lib/obex.c:630:3: if_end: End of if statement
+openobex-1.5.0-Source/lib/obex.c:632:2: noescape: Resource "object" is
+not freed or pointed-to in function "obex_object_setcmd(obex_object_t *,
+uint8_t, uint8_t)".
+openobex-1.5.0-Source/lib/obex_object.c:113:39: noescape:
+"obex_object_setcmd(obex_object_t *, uint8_t, uint8_t)" does not free or
+save its pointer parameter "object".
+openobex-1.5.0-Source/lib/obex.c:634:2: cond_true: Condition "cmd == 0",
+taking true branch
+openobex-1.5.0-Source/lib/obex.c:635:3: noescape: Resource "object" is
+not freed or pointed-to in function "obex_insert_connectframe(obex_t *,
+obex_object_t *)".
+openobex-1.5.0-Source/lib/obex_connect.c:42:59: noescape:
+"obex_insert_connectframe(obex_t *, obex_object_t *)" does not free or
+save its pointer parameter "object".
+openobex-1.5.0-Source/lib/obex.c:635:3: cond_false: Condition
+"obex_insert_connectframe(self, object) < 0", taking false branch
+openobex-1.5.0-Source/lib/obex.c:638:3: if_end: End of if statement
+openobex-1.5.0-Source/lib/obex.c:641:2: return_alloc: Returning
+allocated memory "object".
+openobex-1.5.0-Source/ircp/ircp_io.c:72:2: var_assign: Assigning:
+"object" = "OBEX_ObjectNew(handle, 2)".
+openobex-1.5.0-Source/ircp/ircp_io.c:73:2: cond_false: Condition "object
+== NULL", taking false branch
+openobex-1.5.0-Source/ircp/ircp_io.c:74:3: if_end: End of if statement
+openobex-1.5.0-Source/ircp/ircp_io.c:78:2: cond_false: Condition "ucname
+== NULL", taking false branch
+openobex-1.5.0-Source/ircp/ircp_io.c:79:3: if_end: End of if statement
+openobex-1.5.0-Source/ircp/ircp_io.c:84:2: noescape: Resource "object"
+is not freed or pointed-to in function "OBEX_ObjectAddHeader(obex_t *,
+obex_object_t *, uint8_t, obex_headerdata_t, uint32_t, unsigned int)".
+openobex-1.5.0-Source/lib/obex.c:713:63: noescape:
+"OBEX_ObjectAddHeader(obex_t *, obex_object_t *, uint8_t,
+obex_headerdata_t, uint32_t, unsigned int)" does not free or save its
+pointer parameter "object".
+openobex-1.5.0-Source/ircp/ircp_io.c:88:2: noescape: Resource "object"
+is not freed or pointed-to in function "OBEX_ObjectAddHeader(obex_t *,
+obex_object_t *, uint8_t, obex_headerdata_t, uint32_t, unsigned int)".
+openobex-1.5.0-Source/lib/obex.c:713:63: noescape:
+"OBEX_ObjectAddHeader(obex_t *, obex_object_t *, uint8_t,
+obex_headerdata_t, uint32_t, unsigned int)" does not free or save its
+pointer parameter "object".
+openobex-1.5.0-Source/ircp/ircp_io.c:98:2: noescape: Resource "object"
+is not freed or pointed-to in function "OBEX_ObjectAddHeader(obex_t *,
+obex_object_t *, uint8_t, obex_headerdata_t, uint32_t, unsigned int)".
+openobex-1.5.0-Source/lib/obex.c:713:63: noescape:
+"OBEX_ObjectAddHeader(obex_t *, obex_object_t *, uint8_t,
+obex_headerdata_t, uint32_t, unsigned int)" does not free or save its
+pointer parameter "object".
+openobex-1.5.0-Source/ircp/ircp_io.c:102:2: return_alloc: Returning
+allocated memory "object".
+openobex-1.5.0-Source/ircp/ircp_client.c:283: var_assign: Assigning:
+"object" = storage returned from
+"build_object_from_file(cli->obexhandle, localname, remotename)".
+openobex-1.5.0-Source/ircp/ircp_client.c:286: cond_true: Condition
+"cli->fd < 0", taking true branch
+openobex-1.5.0-Source/ircp/ircp_client.c:287: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/ircp/ircp_client.c:289: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_client.c:293: cond_true: Condition "ret
+< 0", taking true branch
+openobex-1.5.0-Source/ircp/ircp_client.c:294: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/ircp/ircp_client.c:296: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_client.c:298: leaked_storage: Variable
+"object" going out of scope leaks the storage it points to.
+---
+ ircp/ircp_client.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ircp/ircp_client.c b/ircp/ircp_client.c
+index 140a0a6..5f5162d 100644
+--- a/ircp/ircp_client.c
++++ b/ircp/ircp_client.c
+@@ -285,6 +285,7 @@ static int ircp_put_file(ircp_client_t *cli, char *localname, char *remotename)
+ 	cli->fd = open(localname, O_RDONLY, 0);
+ 	if(cli->fd < 0) {
+ 		ret = -1;
++		OBEX_ObjectDelete(cli->obexhandle, object);
+ 	}
+ 	else {
+ 		ret = cli_sync_request(cli, object);
+-- 
+1.7.11.7
+
+
+From d90babe60ffcaf4cab419940b7df259784707216 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 08:32:15 +0100
+Subject: [PATCH 05/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_io.c:89: open_fn: Returning handle
+opened by function "open(char const *, int, ...)".
+openobex-1.5.0-Source/apps/obex_io.c:89: var_assign: Assigning: "fd" =
+handle returned from "open(filename, 0, 0)".
+openobex-1.5.0-Source/apps/obex_io.c:92: cond_false: Condition "fd ==
+-1", taking false branch
+openobex-1.5.0-Source/apps/obex_io.c:94: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_io.c:96: cond_true: Condition "!(buf =
+malloc(*file_size))", taking true branch
+openobex-1.5.0-Source/apps/obex_io.c:97: leaked_handle: Handle variable
+"fd" going out of scope leaks the handle.
+---
+ apps/obex_io.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/apps/obex_io.c b/apps/obex_io.c
+index 3642fee..2152bb4 100644
+--- a/apps/obex_io.c
++++ b/apps/obex_io.c
+@@ -98,6 +98,7 @@ uint8_t* easy_readfile(const char *filename, int *file_size)
+ 	}
+ 	
+ 	if(! (buf = malloc(*file_size)) )	{
++		close(fd);
+ 		return NULL;
+ 	}
+ 
+-- 
+1.7.11.7
+
+
+From 4446bac377186eaad0245b0b4c445d13f2a1541f Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 08:53:13 +0100
+Subject: [PATCH 06/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/ircp/ircp_server.c:224: cond_true: Condition
+"OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv, &hlen)",
+taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:225: switch: Switch case value
+"1"
+openobex-1.5.0-Source/ircp/ircp_server.c:226: switch_case: Reached case
+"1"
+openobex-1.5.0-Source/ircp/ircp_server.c:227: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/ircp/ircp_server.c:227: var_assign: Assigning:
+"name" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/ircp/ircp_server.c:227: cond_true: Condition "name
+= malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:228: noescape: Resource
+"(uint8_t *)name" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/ircp/ircp_server.c:230: break: Breaking from
+switch
+openobex-1.5.0-Source/ircp/ircp_server.c:233: switch_end: Reached
+end of switch
+openobex-1.5.0-Source/ircp/ircp_server.c:234: loop: Jumping back to
+the beginning of the loop
+openobex-1.5.0-Source/ircp/ircp_server.c:224: loop_begin: Jumped
+back to beginning of loop
+openobex-1.5.0-Source/ircp/ircp_server.c:224: cond_true: Condition
+"OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv,
+&hlen)", taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:225: switch: Switch case
+value "1"
+openobex-1.5.0-Source/ircp/ircp_server.c:226: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/ircp/ircp_server.c:227: overwrite_var:
+Overwriting "name" in "name = malloc(hlen / 2U)" leaks the storage
+that "name" points to.
+---
+ ircp/ircp_server.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/ircp/ircp_server.c b/ircp/ircp_server.c
+index 5545780..123b80c 100644
+--- a/ircp/ircp_server.c
++++ b/ircp/ircp_server.c
+@@ -222,13 +222,13 @@ static int new_file(ircp_server_t *srv, obex_object_t *object)
+ 
+ 	/* First iterate through recieved header to find name */
+ 	while (OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv, &hlen))	{
+-		switch(hi)	{
+-		case OBEX_HDR_NAME:
++		if(hi == OBEX_HDR_NAME) {
+ 			if( (name = malloc(hlen / 2)))	{
+ 				OBEX_UnicodeToChar((uint8_t *) name, hv.bs, hlen);
+ 			}
+ 			break;
+-		default:
++		}
++		else {
+ 			DEBUG(4, "Skipped header %02x\n", hi);
+ 		}
+ 	}
+-- 
+1.7.11.7
+
+
+From 379ede0a12e22c49770b9ab81ae3432f8d470036 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 08:57:14 +0100
+Subject: [PATCH 07/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+enobex-1.5.0-Source/ircp/ircp_server.c:152: cond_false: Condition
+"nonhdr_data_len != 2", taking false branch
+openobex-1.5.0-Source/ircp/ircp_server.c:155: if_end: End of if
+statement
+openobex-1.5.0-Source/ircp/ircp_server.c:157: cond_true: Condition
+"OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv, &hlen)",
+taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:158: switch: Switch case value
+"1"
+openobex-1.5.0-Source/ircp/ircp_server.c:159: switch_case: Reached case
+"1"
+openobex-1.5.0-Source/ircp/ircp_server.c:160: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/ircp/ircp_server.c:160: var_assign: Assigning:
+"name" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/ircp/ircp_server.c:160: cond_true: Condition "name
+= malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:161: noescape: Resource
+"(uint8_t *)name" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/ircp/ircp_server.c:163: break: Breaking from
+switch
+openobex-1.5.0-Source/ircp/ircp_server.c:166: switch_end: Reached
+end of switch
+openobex-1.5.0-Source/ircp/ircp_server.c:167: loop: Jumping back to
+the beginning of the loop
+openobex-1.5.0-Source/ircp/ircp_server.c:157: loop_begin: Jumped
+back to beginning of loop
+openobex-1.5.0-Source/ircp/ircp_server.c:157: cond_true: Condition
+"OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv,
+&hlen)", taking true branch
+openobex-1.5.0-Source/ircp/ircp_server.c:158: switch: Switch case
+value "1"
+openobex-1.5.0-Source/ircp/ircp_server.c:159: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/ircp/ircp_server.c:160: overwrite_var:
+Overwriting "name" in "name = malloc(hlen / 2U)" leaks the storage
+that "name" points to.
+---
+ ircp/ircp_server.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/ircp/ircp_server.c b/ircp/ircp_server.c
+index 123b80c..8f9a6b4 100644
+--- a/ircp/ircp_server.c
++++ b/ircp/ircp_server.c
+@@ -155,13 +155,13 @@ int ircp_srv_setpath(ircp_server_t *srv, obex_object_t *object)
+ 	}
+ 
+ 	while (OBEX_ObjectGetNextHeader(srv->obexhandle, object, &hi, &hv, &hlen))	{
+-		switch(hi)	{
+-		case OBEX_HDR_NAME:
++		if (hi == OBEX_HDR_NAME) {
+ 			if( (name = malloc(hlen / 2)))	{
+ 				OBEX_UnicodeToChar((uint8_t *) name, hv.bs, hlen);
+ 			}
+ 			break;
+-		default:
++		}
++		else {
+ 			DEBUG(2, "Skipped header %02x\n", hi);
+ 		}
+ 	}
+-- 
+1.7.11.7
+
+
+From 6b0886d3e547d289e56f40a99eec6b81242fb8d8 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:00:39 +0100
+Subject: [PATCH 08/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_put_common.c:59: cond_true: Condition
+"OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen)", taking true
+branch
+openobex-1.5.0-Source/apps/obex_put_common.c:60: switch: Switch case
+value "1"
+openobex-1.5.0-Source/apps/obex_put_common.c:65: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/apps/obex_put_common.c:66: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/apps/obex_put_common.c:66: var_assign: Assigning:
+"namebuf" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/apps/obex_put_common.c:66: cond_true: Condition
+"namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_put_common.c:67: noescape: Resource
+"(uint8_t *)namebuf" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/apps/obex_put_common.c:68: var_assign: Assigning:
+"name" = "namebuf".
+openobex-1.5.0-Source/apps/obex_put_common.c:70: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_put_common.c:82: switch_end: Reached
+end of switch
+openobex-1.5.0-Source/apps/obex_put_common.c:83: loop: Jumping back
+to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_put_common.c:59: loop_begin: Jumped
+back to beginning of loop
+openobex-1.5.0-Source/apps/obex_put_common.c:59: cond_false:
+Condition "OBEX_ObjectGetNextHeader(handle, object, &hi, &hv,
+&hlen)", taking false branch
+openobex-1.5.0-Source/apps/obex_put_common.c:83: loop_end: Reached
+end of loop
+openobex-1.5.0-Source/apps/obex_put_common.c:84: cond_true:
+Condition "!body", taking true branch
+openobex-1.5.0-Source/apps/obex_put_common.c:86: leaked_storage:
+Variable "namebuf" going out of scope leaks the storage it points
+to.
+openobex-1.5.0-Source/apps/obex_put_common.c:86: leaked_storage:
+Variable "name" going out of scope leaks the storage it points to.
+---
+ apps/obex_put_common.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/apps/obex_put_common.c b/apps/obex_put_common.c
+index 856f993..66da6d4 100644
+--- a/apps/obex_put_common.c
++++ b/apps/obex_put_common.c
+@@ -63,6 +63,10 @@ void put_done(obex_object_t *object)
+ 			body_len = hlen;
+ 			break;
+ 		case OBEX_HDR_NAME:
++			if (namebuf) {
++				free(namebuf);
++				name = namebuf = NULL;
++			}
+ 			if( (namebuf = malloc(hlen / 2)))	{
+ 				OBEX_UnicodeToChar((uint8_t *) namebuf, hv.bs, hlen);
+ 				name = namebuf;
+-- 
+1.7.11.7
+
+
+From 636c06da96c73867499acbc3d5b6a0811c5bdb66 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:03:26 +0100
+Subject: [PATCH 09/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_true: Condition
+"OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen)", taking true
+branch
+openobex-1.5.0-Source/apps/obex_test_server.c:107: switch: Switch case
+value "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:108: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:110: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: var_assign:
+Assigning: "namebuf" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: cond_true: Condition
+"namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:111: noescape: Resource
+"(uint8_t *)namebuf" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/apps/obex_test_server.c:112: var_assign:
+Assigning: "name" = "namebuf".
+openobex-1.5.0-Source/apps/obex_test_server.c:114: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test_server.c:118: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test_server.c:119: loop: Jumping
+back to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: loop_begin:
+Jumped back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_true:
+Condition "OBEX_ObjectGetNextHeader(handle, object, &hi, &hv,
+&hlen)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:107: switch: Switch
+case value "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:108: switch_case:
+Reached case "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:110: cond_true:
+Condition "namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:112: overwrite_var:
+Overwriting "name" in "name = namebuf" leaks the storage that "name"
+points to.
+---
+ apps/obex_test_server.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/apps/obex_test_server.c b/apps/obex_test_server.c
+index 7b9d16a..4d82293 100644
+--- a/apps/obex_test_server.c
++++ b/apps/obex_test_server.c
+@@ -104,16 +104,15 @@ void get_server(obex_t *handle, obex_object_t *object)
+ 	printf("%s()\n", __FUNCTION__);
+ 
+ 	while (OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen))	{
+-		switch(hi)	{
+-		case OBEX_HDR_NAME:
++		if (hi == OBEX_HDR_NAME) {
+ 			printf("%s() Found name\n", __FUNCTION__);
+ 			if( (namebuf = malloc(hlen / 2)))	{
+ 				OBEX_UnicodeToChar((uint8_t *) namebuf, hv.bs, hlen);
+ 				name = namebuf;
+ 			}
+ 			break;
+-		
+-		default:
++		}
++		else {
+ 			printf("%s() Skipped header %02x\n", __FUNCTION__, hi);
+ 		}
+ 	}
+-- 
+1.7.11.7
+
+
+From 6d40c4b847696d97507e22c5ab0e3f18cf14051d Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:11:55 +0100
+Subject: [PATCH 10/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_true: Condition
+"OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen)", taking true
+branch
+openobex-1.5.0-Source/apps/obex_test_server.c:107: switch: Switch case
+value "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:108: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:110: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: var_assign:
+Assigning: "namebuf" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: cond_true: Condition
+"namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:111: noescape: Resource
+"(uint8_t *)namebuf" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/apps/obex_test_server.c:112: var_assign:
+Assigning: "name" = "namebuf".
+openobex-1.5.0-Source/apps/obex_test_server.c:114: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test_server.c:118: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test_server.c:119: loop: Jumping
+back to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: loop_begin:
+Jumped back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_false:
+Condition "OBEX_ObjectGetNextHeader(handle, object, &hi, &hv,
+&hlen)", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:119: loop_end: Reached
+end of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:121: cond_false:
+Condition "!name", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:125: if_end: End of if
+statement
+openobex-1.5.0-Source/apps/obex_test_server.c:126: noescape:
+Resource "name" is not freed or pointed-to in function "printf(char
+const * restrict, ...)".
+openobex-1.5.0-Source/apps/obex_test_server.c:128: noescape:
+Resource "name" is not freed or pointed-to in function
+"easy_readfile(char const *, int *)".
+openobex-1.5.0-Source/apps/obex_io.c:77:36: noescape:
+"easy_readfile(char const *, int *)" does not free or save its
+pointer parameter "filename".
+openobex-1.5.0-Source/apps/obex_test_server.c:129: cond_true:
+Condition "buf == NULL", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:130: noescape:
+Resource "name" is not freed or pointed-to in function "printf(char
+const * restrict, ...)".
+openobex-1.5.0-Source/apps/obex_test_server.c:132: leaked_storage:
+Variable "namebuf" going out of scope leaks the storage it points
+to.
+openobex-1.5.0-Source/apps/obex_test_server.c:132: leaked_storage:
+Variable "name" going out of scope leaks the storage it points to.
+
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_true: Condition
+"OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen)", taking true
+branch
+openobex-1.5.0-Source/apps/obex_test_server.c:107: switch: Switch case
+value "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:108: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:110: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: var_assign:
+Assigning: "namebuf" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/apps/obex_test_server.c:110: cond_true: Condition
+"namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:111: noescape: Resource
+"(uint8_t *)namebuf" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/apps/obex_test_server.c:112: var_assign:
+Assigning: "name" = "namebuf".
+openobex-1.5.0-Source/apps/obex_test_server.c:114: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test_server.c:118: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test_server.c:119: loop: Jumping
+back to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: loop_begin:
+Jumped back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:106: cond_false:
+Condition "OBEX_ObjectGetNextHeader(handle, object, &hi, &hv,
+&hlen)", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:119: loop_end: Reached
+end of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:121: cond_false:
+Condition "!name", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:125: if_end: End of if
+statement
+openobex-1.5.0-Source/apps/obex_test_server.c:126: noescape:
+Resource "name" is not freed or pointed-to in function "printf(char
+const * restrict, ...)".
+openobex-1.5.0-Source/apps/obex_test_server.c:128: noescape:
+Resource "name" is not freed or pointed-to in function
+"easy_readfile(char const *, int *)".
+openobex-1.5.0-Source/apps/obex_io.c:77:36: noescape:
+"easy_readfile(char const *, int *)" does not free or save its
+pointer parameter "filename".
+openobex-1.5.0-Source/apps/obex_test_server.c:129: cond_false:
+Condition "buf == NULL", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:133: if_end: End of if
+statement
+openobex-1.5.0-Source/apps/obex_test_server.c:141: leaked_storage:
+Variable "namebuf" going out of scope leaks the storage it points
+to.
+openobex-1.5.0-Source/apps/obex_test_server.c:141: leaked_storage:
+Variable "name" going out of scope leaks the storage it points to.
+---
+ apps/obex_test_server.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/apps/obex_test_server.c b/apps/obex_test_server.c
+index 4d82293..9ce0228 100644
+--- a/apps/obex_test_server.c
++++ b/apps/obex_test_server.c
+@@ -128,6 +128,7 @@ void get_server(obex_t *handle, obex_object_t *object)
+ 	if(buf == NULL) {
+ 		printf("Can't find file %s\n", name);
+ 		OBEX_ObjectSetRsp(object, OBEX_RSP_NOT_FOUND, OBEX_RSP_NOT_FOUND);
++		free(namebuf);
+ 		return;
+ 	}
+ 
+@@ -136,6 +137,7 @@ void get_server(obex_t *handle, obex_object_t *object)
+ 	OBEX_ObjectAddHeader(handle, object, OBEX_HDR_BODY, hv, file_size, 0);
+ 	hv.bq4 = file_size;
+ 	OBEX_ObjectAddHeader(handle, object, OBEX_HDR_LENGTH, hv, sizeof(uint32_t), 0);
++	free(namebuf);
+ 	free(buf);
+ 	return;
+ }
+-- 
+1.7.11.7
+
+
+From 7722733e86b5378b30dc076dc78acc51c8ae5fd7 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:25:37 +0100
+Subject: [PATCH 11/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_test_server.c:57: cond_true: Condition
+"OBEX_ObjectGetNextHeader(handle, object, &hi, &hv, &hlen)", taking true
+branch
+openobex-1.5.0-Source/apps/obex_test_server.c:58: switch: Switch case
+value "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:64: switch_case: Reached
+case "1"
+openobex-1.5.0-Source/apps/obex_test_server.c:66: alloc_fn: Storage is
+returned from allocation function "malloc(size_t)".
+openobex-1.5.0-Source/apps/obex_test_server.c:66: var_assign: Assigning:
+"namebuf" = storage returned from "malloc(hlen / 2U)".
+openobex-1.5.0-Source/apps/obex_test_server.c:66: cond_true: Condition
+"namebuf = malloc(hlen / 2)", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:67: noescape: Resource
+"(uint8_t *)namebuf" is not freed or pointed-to in function
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)".
+openobex-1.5.0-Source/lib/obex.c:899:41: noescape:
+"OBEX_UnicodeToChar(uint8_t *, uint8_t const *, int)" does not free or
+save its pointer parameter "c".
+openobex-1.5.0-Source/apps/obex_test_server.c:68: var_assign: Assigning:
+"name" = "namebuf".
+openobex-1.5.0-Source/apps/obex_test_server.c:70: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test_server.c:74: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test_server.c:75: loop: Jumping back
+to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test_server.c:57: loop_begin: Jumped
+back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:57: cond_false:
+Condition "OBEX_ObjectGetNextHeader(handle, object, &hi, &hv,
+&hlen)", taking false branch
+openobex-1.5.0-Source/apps/obex_test_server.c:75: loop_end: Reached
+end of loop
+openobex-1.5.0-Source/apps/obex_test_server.c:76: cond_true:
+Condition "!body", taking true branch
+openobex-1.5.0-Source/apps/obex_test_server.c:78: leaked_storage:
+Variable "namebuf" going out of scope leaks the storage it points
+to.
+openobex-1.5.0-Source/apps/obex_test_server.c:78: leaked_storage:
+Variable "name" going out of scope leaks the storage it points to.
+---
+ apps/obex_test_server.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/apps/obex_test_server.c b/apps/obex_test_server.c
+index 9ce0228..e9163ad 100644
+--- a/apps/obex_test_server.c
++++ b/apps/obex_test_server.c
+@@ -63,6 +63,10 @@ void put_server(obex_t *handle, obex_object_t *object)
+ 			break;
+ 		case OBEX_HDR_NAME:
+ 			printf("%s() Found name\n", __FUNCTION__);
++			if (namebuf) {
++				free(namebuf);
++				name = namebuf = NULL;
++			}
+ 			if( (namebuf = malloc(hlen / 2)))	{
+ 				OBEX_UnicodeToChar((uint8_t *) namebuf, hv.bs, hlen);
+ 				name = namebuf;
+@@ -75,6 +79,7 @@ void put_server(obex_t *handle, obex_object_t *object)
+ 	}
+ 	if(!body)	{
+ 		printf("Got a PUT without a body\n");
++		free(namebuf);
+ 		return;
+ 	}
+ 	if(!name)	{
+-- 
+1.7.11.7
+
+
+From 4bd762e35d5467ba76c20ce0fedab2d677d03c09 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:31:36 +0100
+Subject: [PATCH 12/15] RESOURCE_LEAK (CWE-404)
+
+Coverity output:
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: alloc_fn: Storage is
+returned from allocation function "opendir(char const *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: var_assign: Assigning:
+"dir" = storage returned from "opendir(path)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:38: cond_false: Condition "dir
+== NULL", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:40: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:41: noescape: Resource "dir" is
+not freed or pointed-to in function "readdir(DIR *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: cond_true: Condition
+"dirent != NULL", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:43: cond_false: Condition
+"__coverity_strcmp(".", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: cond_false: Condition
+"__coverity_strcmp("..", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:47: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:49: cond_false: Condition
+"lstat(t, &statbuf) < 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:52: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:52: cond_true: Condition
+"(statbuf.st_mode & 61440) == 32768", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:54: cond_false: Condition "ret
+< 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:55: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:56: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:74: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:76: noescape: Resource "dir" is
+not freed or pointed-to in function "readdir(DIR *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:77: loop: Jumping back to the
+beginning of the loop
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: loop_begin: Jumped back to
+beginning of loop
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: cond_true: Condition
+"dirent != NULL", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:43: cond_false: Condition
+"__coverity_strcmp(".", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: cond_false: Condition
+"__coverity_strcmp("..", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:47: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:49: cond_true: Condition
+"lstat(t, &statbuf) < 0", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:50: leaked_storage: Variable
+"dir" going out of scope leaks the storage it points to.
+
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: alloc_fn: Storage is
+returned from allocation function "opendir(char const *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: var_assign: Assigning:
+"dir" = storage returned from "opendir(path)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:38: cond_false: Condition "dir
+== NULL", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:40: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:41: noescape: Resource "dir" is
+not freed or pointed-to in function "readdir(DIR *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: cond_true: Condition
+"dirent != NULL", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:43: cond_true: Condition
+"__coverity_strcmp(".", dirent->d_name) == 0", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:44: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:75: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:76: noescape: Resource "dir" is
+not freed or pointed-to in function "readdir(DIR *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:77: loop: Jumping back to the
+beginning of the loop
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: loop_begin: Jumped back to
+beginning of loop
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: cond_false: Condition
+"dirent != NULL", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:77: loop_end: Reached end of
+loop
+openobex-1.5.0-Source/ircp/dirtraverse.c:80: leaked_storage: Variable
+"dir" going out of scope leaks the storage it points to.
+
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: alloc_fn: Storage is
+returned from allocation function "opendir(char const *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:37: var_assign: Assigning:
+"dir" = storage returned from "opendir(path)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:38: cond_false: Condition "dir
+== NULL", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:40: if_end: End of if statement
+openobex-1.5.0-Source/ircp/dirtraverse.c:41: noescape: Resource "dir" is
+not freed or pointed-to in function "readdir(DIR *)".
+openobex-1.5.0-Source/ircp/dirtraverse.c:42: cond_true: Condition
+"dirent != NULL", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:43: cond_false: Condition
+"__coverity_strcmp(".", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:45: cond_false: Condition
+"__coverity_strcmp("..", dirent->d_name) == 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:47: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:49: cond_false: Condition
+"lstat(t, &statbuf) < 0", taking false branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:52: else_branch: Reached else
+branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:52: cond_true: Condition
+"(statbuf.st_mode & 61440) == 32768", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:54: cond_true: Condition "ret <
+0", taking true branch
+openobex-1.5.0-Source/ircp/dirtraverse.c:55: goto: Jumping to label
+"out"
+openobex-1.5.0-Source/ircp/dirtraverse.c:79: label: Reached label "out"
+openobex-1.5.0-Source/ircp/dirtraverse.c:80: leaked_storage: Variable
+"dir" going out of scope leaks the storage it points to.
+---
+ ircp/dirtraverse.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/ircp/dirtraverse.c b/ircp/dirtraverse.c
+index f6c1cf3..7864891 100644
+--- a/ircp/dirtraverse.c
++++ b/ircp/dirtraverse.c
+@@ -47,6 +47,7 @@ int visit_dir(char *path, visit_cb cb, void *userdata)
+ 		else {
+ 			snprintf(t, MAXPATHLEN, "%s/%s", path, dirent->d_name);
+ 			if(lstat(t, &statbuf) < 0) {
++				closedir(dir);
+ 				return -1;
+ 			}
+ 			else if(S_ISREG(statbuf.st_mode)) {
+@@ -77,6 +78,7 @@ int visit_dir(char *path, visit_cb cb, void *userdata)
+ 	}
+ 
+ out:
++	closedir(dir);
+ 	return ret;
+ 
+ #else
+-- 
+1.7.11.7
+
+
+From 30a3f1a333bc36d4e1a59e19cc353f455174af20 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 09:49:42 +0100
+Subject: [PATCH 13/15] SECURE_CODING (CWE-676)
+
+Coverity output:
+openobex-1.5.0-Source/lib/irobex.c:90: secure_coding: [VERY RISKY].
+Using "strcpy" can cause a buffer overflow when done incorrectly.  If
+the destination string of a strcpy() is not large enough then anything
+might happen. Use strncpy() instead.
+
+openobex-1.5.0-Source/lib/irobex.c:279: secure_coding: [VERY RISKY].
+Using "strcpy" can cause a buffer overflow when done incorrectly.  If
+the destination string of a strcpy() is not large enough then anything
+might happen. Use strncpy() instead.
+openobex-1.5.0-Source/lib/irobex.c:281: secure_coding: [VERY RISKY].
+Using "strcpy" can cause a buffer overflow when done incorrectly.  If
+the destination string of a strcpy() is not large enough then anything
+might happen. Use strncpy() instead.
+---
+ lib/irobex.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/irobex.c b/lib/irobex.c
+index df01b22..c5939f6 100644
+--- a/lib/irobex.c
++++ b/lib/irobex.c
+@@ -87,7 +87,7 @@ void irobex_prepare_connect(obex_t *self, const char *service)
+ 	if (service)
+ 		strncpy(self->trans.peer.irda.sir_name, service, 25);
+ 	else
+-		strcpy(self->trans.peer.irda.sir_name, "OBEX");
++		strncpy(self->trans.peer.irda.sir_name, "OBEX", 25);
+ }
+ 
+ /*
+@@ -276,10 +276,10 @@ static int irobex_discover_devices(obex_t *self)
+ 			/* Ask if the requested service exist on this device */
+ 			len = sizeof(ias_query);
+ 			ias_query.daddr = list->dev[i].daddr;
+-			strcpy(ias_query.irda_class_name,
+-			       self->trans.peer.irda.sir_name);
+-			strcpy(ias_query.irda_attrib_name,
+-			       "IrDA:TinyTP:LsapSel");
++			strncpy(ias_query.irda_class_name,
++			       self->trans.peer.irda.sir_name, IAS_MAX_CLASSNAME);
++			strncpy(ias_query.irda_attrib_name,
++			       "IrDA:TinyTP:LsapSel", IAS_MAX_ATTRIBNAME);
+ 			err = getsockopt(self->fd, SOL_IRLMP, IRLMP_IAS_QUERY,
+ 					 &ias_query, &len);
+ 			/* Check if we failed */
+-- 
+1.7.11.7
+
+
+From 1c46847f432d2f64dae842fb998310ba159e40fb Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 10:09:15 +0100
+Subject: [PATCH 14/15] UNINIT (CWE-457)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_test.c:160: var_decl: Declaring variable
+"obex_intf" without initializer.
+openobex-1.5.0-Source/apps/obex_test.c:170: cond_true: Condition "argc
+== 2", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:170: cond_true: Condition
+"__coverity_strcmp(argv[1], "-s") == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:172: cond_true: Condition "argc
+== 2", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:172: cond_true: Condition
+"__coverity_strcmp(argv[1], "-r") == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:178: cond_true: Condition "argc
+== 2", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:178: cond_true: Condition
+"__coverity_strcmp(argv[1], "-i") == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:180: cond_true: Condition "argc
+>= 2", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:180: cond_true: Condition
+"__coverity_strcmp(argv[1], "-b") == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:182: cond_true: Condition "argc
+>= 2", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:182: cond_true: Condition
+"__coverity_strcmp(argv[1], "-u") == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:185: cond_true: Condition
+"cobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:187: cond_false: Condition "argc
+== 3", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:190: else_branch: Reached else
+branch
+openobex-1.5.0-Source/apps/obex_test.c:192: cond_true: Condition "r320",
+taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:193: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/apps/obex_test.c:195: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_test.c:199: cond_false: Condition
+"custfunc.customdata == NULL", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:202: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_test.c:204: cond_false: Condition
+"!(handle = OBEX_Init(3, obex_event(obex_t *, obex_object_t *, int, int,
+int, int), 0))", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:207: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_test.c:215: cond_false: Condition
+"OBEX_RegisterCTransport(handle, &custfunc) < 0", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:217: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_test.c:221: if_fallthrough: Falling
+through to end of if statement
+openobex-1.5.0-Source/apps/obex_test.c:315: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_test.c:321: cond_true: Condition "!end",
+taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:324: switch: Switch case value
+"103"
+openobex-1.5.0-Source/apps/obex_test.c:328: switch_case: Reached case
+"103"
+openobex-1.5.0-Source/apps/obex_test.c:330: break: Breaking from switch
+openobex-1.5.0-Source/apps/obex_test.c:428: switch_end: Reached end of
+switch
+openobex-1.5.0-Source/apps/obex_test.c:429: loop: Jumping back to
+the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test.c:321: loop_begin: Jumped back
+to beginning of loop
+openobex-1.5.0-Source/apps/obex_test.c:321: cond_true: Condition
+"!end", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:324: switch: Switch case
+value "99"
+openobex-1.5.0-Source/apps/obex_test.c:340: switch_case: Reached
+case "99"
+openobex-1.5.0-Source/apps/obex_test.c:342: cond_true: Condition
+"tcpobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:343: cond_true: Condition
+"TcpOBEX_TransportConnect(handle, NULL, 0) < 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:345: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test.c:428: switch_end: Reached
+end of switch
+openobex-1.5.0-Source/apps/obex_test.c:429: loop: Jumping back
+to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test.c:321: loop_begin: Jumped
+back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test.c:321: cond_true: Condition
+"!end", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:324: switch: Switch case
+value "99"
+openobex-1.5.0-Source/apps/obex_test.c:340: switch_case: Reached
+case "99"
+openobex-1.5.0-Source/apps/obex_test.c:342: cond_true: Condition
+"tcpobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:343: cond_true: Condition
+"TcpOBEX_TransportConnect(handle, NULL, 0) < 0", taking true
+branch
+openobex-1.5.0-Source/apps/obex_test.c:345: break: Breaking from
+switch
+openobex-1.5.0-Source/apps/obex_test.c:428: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test.c:429: loop: Jumping
+back to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test.c:321: loop_begin:
+Jumped back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test.c:321: cond_true:
+Condition "!end", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:324: switch: Switch
+case value "99"
+openobex-1.5.0-Source/apps/obex_test.c:340: switch_case:
+Reached case "99"
+openobex-1.5.0-Source/apps/obex_test.c:342: cond_true:
+Condition "tcpobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:343: cond_false:
+Condition "TcpOBEX_TransportConnect(handle, NULL, 0) < 0",
+taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:346: if_end: End of
+if statement
+openobex-1.5.0-Source/apps/obex_test.c:348: cond_true:
+Condition "cobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:349: cond_false:
+Condition "OBEX_TransportConnect(handle, (struct
+sockaddr *)0x1, 0) < 0", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:352: if_end: End
+of if statement
+openobex-1.5.0-Source/apps/obex_test.c:354: cond_true:
+Condition "btobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:356: cond_true:
+Condition "bacmp(&bdaddr, &bdaddr_t({{0, 0, 0, 0, 0,
+0}})) == 0", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:358: break:
+Breaking from switch
+openobex-1.5.0-Source/apps/obex_test.c:428: switch_end:
+Reached end of switch
+openobex-1.5.0-Source/apps/obex_test.c:429: loop:
+Jumping back to the beginning of the loop
+openobex-1.5.0-Source/apps/obex_test.c:321: loop_begin:
+Jumped back to beginning of loop
+openobex-1.5.0-Source/apps/obex_test.c:321: cond_true:
+Condition "!end", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:324: switch:
+Switch case value "99"
+openobex-1.5.0-Source/apps/obex_test.c:340: switch_case:
+Reached case "99"
+openobex-1.5.0-Source/apps/obex_test.c:342: cond_true:
+Condition "tcpobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:343: cond_false:
+Condition "TcpOBEX_TransportConnect(handle, NULL, 0) <
+0", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:346: if_end: End
+of if statement
+openobex-1.5.0-Source/apps/obex_test.c:348: cond_true:
+Condition "cobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:349: cond_false:
+Condition "OBEX_TransportConnect(handle, (struct
+sockaddr *)0x1, 0) < 0", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:352: if_end: End
+of if statement
+openobex-1.5.0-Source/apps/obex_test.c:354: cond_true:
+Condition "btobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:356: cond_false:
+Condition "bacmp(&bdaddr, &bdaddr_t({{0, 0, 0, 0, 0,
+0}})) == 0", taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:359: if_end: End
+of if statement
+openobex-1.5.0-Source/apps/obex_test.c:360: cond_false:
+Condition "BtOBEX_TransportConnect(handle,
+&bdaddr_t({{0, 0, 0, 0, 0, 0}}), &bdaddr, channel) < 0",
+taking false branch
+openobex-1.5.0-Source/apps/obex_test.c:363: if_end: End
+of if statement
+openobex-1.5.0-Source/apps/obex_test.c:368: cond_true:
+Condition "usbobex", taking true branch
+openobex-1.5.0-Source/apps/obex_test.c:370:
+uninit_use_in_call: Using uninitialized value
+"obex_intf" when calling "OBEX_InterfaceConnect(obex_t
+*, obex_interface_t *)".
+openobex-1.5.0-Source/lib/obex.c:1272:2: cond_false:
+Condition "!(self != NULL)", taking false branch
+openobex-1.5.0-Source/lib/obex.c:1272:2: if_end: End of
+if statement
+openobex-1.5.0-Source/lib/obex.c:1274:2: cond_false:
+Condition "self->object", taking false branch
+openobex-1.5.0-Source/lib/obex.c:1277:2: if_end: End
+of if statement
+openobex-1.5.0-Source/lib/obex.c:1279:2: read_parm:
+Reading a parameter value.
+---
+ apps/obex_test.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apps/obex_test.c b/apps/obex_test.c
+index c04aa5d..aef0b54 100644
+--- a/apps/obex_test.c
++++ b/apps/obex_test.c
+@@ -155,7 +155,7 @@ int main (int argc, char *argv[])
+ #endif
+ 
+ #ifdef HAVE_USB
+-	obex_interface_t *obex_intf;
++	obex_interface_t *obex_intf = NULL;
+ #endif
+ 
+ 	struct context global_context = {0,};
+-- 
+1.7.11.7
+
+
+From 8e2446b58d88f01969661728fa5f4cdad43908a7 Mon Sep 17 00:00:00 2001
+From: Tomas Hozza <thozza@redhat.com>
+Date: Fri, 7 Dec 2012 12:08:48 +0100
+Subject: [PATCH 15/15] NEGATIVE_RETURNS (CWE-394)
+
+Coverity output:
+openobex-1.5.0-Source/apps/obex_io.c:87: negative_return_fn: Function
+"get_filesize(filename)" returns a negative number.
+openobex-1.5.0-Source/apps/obex_io.c:68:2: cond_true: Condition
+"stat(filename, &stats) == -1", taking true branch
+openobex-1.5.0-Source/apps/obex_io.c:70:3: return_negative_constant:
+Explicitly returning negative value "-1".
+openobex-1.5.0-Source/apps/obex_io.c:87: var_assign: Assigning: signed
+variable "*file_size" = "get_filesize(char const *)".
+openobex-1.5.0-Source/apps/obex_io.c:96: cond_false: Condition "fd ==
+-1", taking false branch
+openobex-1.5.0-Source/apps/obex_io.c:98: if_end: End of if statement
+openobex-1.5.0-Source/apps/obex_io.c:100: negative_returns: "*file_size"
+is passed to a parameter that cannot be negative.
+---
+ apps/obex_io.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apps/obex_io.c b/apps/obex_io.c
+index 2152bb4..91d6b0b 100644
+--- a/apps/obex_io.c
++++ b/apps/obex_io.c
+@@ -97,7 +97,7 @@ uint8_t* easy_readfile(const char *filename, int *file_size)
+ 		return NULL;
+ 	}
+ 	
+-	if(! (buf = malloc(*file_size)) )	{
++	if( *file_size < 0 || !(buf = malloc(*file_size)) )	{
+ 		close(fd);
+ 		return NULL;
+ 	}
+-- 
+1.7.11.7
+
