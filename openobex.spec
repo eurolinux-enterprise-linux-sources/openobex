@@ -1,7 +1,7 @@
 Summary: Library for using OBEX
 Name: openobex
 Version: 1.5
-Release: 7%{?dist}
+Release: 8%{?dist}
 License: GPLv2+ and LGPLv2+
 Group: System Environment/Libraries
 URL: http://openobex.sourceforge.net
@@ -92,6 +92,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/obex_push.1*
 
 %changelog
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 1.5-8
+- Mass rebuild 2013-12-27
+
 * Fri Dec 07 2012 Tomas Hozza <thozza@redhat.com> - 1.5-7
 - Fixed errors found by Coverity scan.
 
